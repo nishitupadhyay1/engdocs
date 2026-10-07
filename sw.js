@@ -2,7 +2,7 @@
    Strategy: cache-first. Everything below is pre-cached at install so the app runs fully offline after one visit. */
 'use strict';
 
-const CACHE = 'eng-docs-v1';
+const CACHE = 'eng-docs-v2';
 const KATEX = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist';
 const PRISM = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0';
 
