@@ -119,6 +119,49 @@ header.toolbar .brand { font-weight: 700; letter-spacing: .02em; margin-right: 8
 }
 body.no-side #sidebar, body.no-side #divider { display: none; }
 
+/* Sidebar tabs + file list */
+.side-tabs { display: flex; border-bottom: 1px solid var(--line); margin: -10px 0 8px; position: sticky; top: -10px; background: #fff; }
+.side-tabs button { flex: 1; background: none; border: 0; padding: 9px 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+.side-tabs button.on { color: #0f172a; border-bottom-color: var(--accent); font-weight: 600; }
+.fp-head { display: flex; justify-content: space-between; align-items: center; padding: 2px 8px 6px 14px; font-size: 13px; font-weight: 600; gap: 6px; }
+.fp-head > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-head button { background: none; border: 0; cursor: pointer; font-size: 15px; color: #475569; padding: 0 5px; }
+.fp-head button:hover { color: var(--accent); }
+.fp-dir { padding: 8px 14px 2px; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .05em; }
+.fp-file { display: block; padding: 3px 14px; font-size: 13px; color: #334155; text-decoration: none; border-left: 3px solid transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-file.in { padding-left: 24px; }
+.fp-file:hover { background: #f1f5f9; }
+.fp-file.on { background: #eff6ff; border-left-color: var(--accent); font-weight: 600; }
+.fp-msg { padding: 8px 14px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.btn2 { margin-top: 8px; background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+.filelabel { font-size: 12px; color: #94a3b8; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fix-fm { display: block; margin-top: 8px; background: #b45309; color: #fff; border: 0; border-radius: 5px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+.fix-fm:hover { background: #92400e; }
+
+/* Settings dialog */
+dialog#dlgSetup { border: 0; border-radius: 10px; padding: 0; width: min(700px, 94vw); box-shadow: 0 20px 50px rgba(15,23,42,.35); color: #0f172a; }
+dialog#dlgSetup::backdrop { background: rgba(15,23,42,.45); }
+#setupForm { padding: 18px 22px 16px; max-height: 88vh; overflow: auto; font-size: 13px; }
+#setupForm h3 { margin: 0 0 10px; font-size: 17px; }
+#setupForm fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 10px; padding: 8px 12px 10px; }
+#setupForm legend { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #475569; padding: 0 4px; }
+#setupForm .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+#setupForm .g2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+#setupForm label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+#setupForm input[type=text], #setupForm input[type=number], #setupForm textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 7px; font: inherit; }
+#setupForm .opts { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; margin: 6px 0; }
+#setupForm .opts label { display: inline-flex; gap: 5px; align-items: center; color: #0f172a; font-size: 13px; margin: 0; }
+#setupForm .hint { color: var(--muted); font-size: 12px; margin: 4px 0 8px; line-height: 1.5; }
+#setupForm code { background: #f1f5f9; padding: 0 4px; border-radius: 3px; }
+#setupPreview { border: 1px dashed #94a3b8; border-radius: 6px; padding: 6px 10px; background: #f8fafc; margin: 6px 0 10px; }
+#setupPreview .pv-row { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 3px 0; color: #334155; gap: 6px; }
+#setupPreview .pv-row span:nth-child(2) { text-align: center; } #setupPreview .pv-row span:nth-child(3) { text-align: right; }
+#setupPreview .pv-body { padding: 14px 0; text-align: center; color: #94a3b8; font-size: 12px; }
+#setupForm .actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+#setupForm .actions .sp { flex: 1; }
+#setupForm .actions button { border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; }
+#setupForm .actions button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 /* ============ PRINT / PDF (strict A4) ============ */
 @media print {
   html, body { height: auto; background: #fff; }
@@ -176,11 +219,15 @@ body.no-side #sidebar, body.no-side #divider { display: none; }
     <span class="seg-label">Mode</span>
     <span class="seg" id="segMode"><button data-v="edit">Edit</button><button data-v="view" class="on">View-Only</button></span>
 
+    <button class="btn" id="btnFolder" title="Open a folder on this computer (like vscode.dev)">📁 Open Folder</button>
+    <button class="btn" id="btnNew" title="New document with pre-filled frontmatter">New</button>
     <button class="btn" id="btnImage" title="Insert image (also: drag &amp; drop, or paste)">Insert Image</button>
     <button class="btn" id="btnOpen">Open .md</button>
     <button class="btn" id="btnDownload">Download .md</button>
     <button class="btn" id="btnPdf">Export to PDF</button>
+    <button class="btn" id="btnSetup" title="Header / footer and new-document defaults">⚙ Page Setup</button>
     <span class="spacer"></span>
+    <span id="fileLabel" class="filelabel"></span>
     <button id="issuesBadge" style="display:none"></button>
     <span id="saveStatus"><i></i><span>Saved</span></span>
     <button class="btn" id="btnInstall" style="display:none">⤓ Install</button>
@@ -189,7 +236,11 @@ body.no-side #sidebar, body.no-side #divider { display: none; }
   </header>
 
   <div id="main">
-    <aside id="sidebar"><h2>Contents</h2><nav id="tocList"></nav><div id="tocEmpty" style="display:none">No headings yet.</div></aside>
+    <aside id="sidebar">
+      <div class="side-tabs"><button data-pane="files">Files</button><button data-pane="toc" class="on">Contents</button></div>
+      <div id="filesPane" style="display:none"></div>
+      <div id="tocPane"><nav id="tocList"></nav><div id="tocEmpty" style="display:none">No headings yet.</div></div>
+    </aside>
     <div id="divider" role="separator" aria-orientation="vertical"></div>
     <section id="content" data-layout="visual-view">
       <div id="editorWrap"><textarea id="editor" spellcheck="false" wrap="off" readonly aria-label="Markdown source"></textarea></div>
@@ -201,6 +252,50 @@ body.no-side #sidebar, body.no-side #divider { display: none; }
 <div id="printRoot" aria-hidden="true"></div>
 <style id="printPageStyle"></style>
 <div id="toast"></div>
+
+<dialog id="dlgSetup">
+  <form id="setupForm" autocomplete="off">
+    <h3>Page setup &amp; defaults</h3>
+    <fieldset><legend>Running header</legend>
+      <div class="g3">
+        <div><label for="sHL">Left</label><input type="text" id="sHL"></div>
+        <div><label for="sHC">Centre</label><input type="text" id="sHC"></div>
+        <div><label for="sHR">Right</label><input type="text" id="sHR"></div>
+      </div></fieldset>
+    <fieldset><legend>Running footer</legend>
+      <div class="g3">
+        <div><label for="sFL">Left</label><input type="text" id="sFL"></div>
+        <div><label for="sFC">Centre</label><input type="text" id="sFC"></div>
+        <div><label for="sFR">Right</label><input type="text" id="sFR"></div>
+      </div></fieldset>
+    <div class="hint">Tokens: <code>{doc_number}</code> <code>{title}</code> <code>{rev}</code> <code>{status}</code> <code>{classification}</code> <code>{date}</code> <code>{author}</code> <code>{approver}</code> <code>{today}</code> <code>{page}</code> <code>{pages}</code></div>
+    <div class="opts">
+      <label>Font size (pt) <input type="number" id="sSize" min="6" max="14" step="0.5" style="width:70px"></label>
+      <label><input type="checkbox" id="sRule"> Separator rules</label>
+      <label><input type="checkbox" id="sCover"> Show on cover page</label>
+      <label><input type="checkbox" id="sWm"> Status watermark (DRAFT / FOR REVIEW)</label>
+    </div>
+    <div class="hint">Preview (page 3 of 7):</div>
+    <div id="setupPreview"></div>
+    <div class="opts"><b>Apply header/footer to:</b>
+      <label><input type="radio" name="sScope" value="doc" id="sScopeDoc"> This document (stored in its frontmatter, so it travels with the file)</label>
+      <label><input type="radio" name="sScope" value="global" id="sScopeGlobal"> All documents on this browser</label>
+    </div>
+    <fieldset><legend>New-document defaults (this browser)</legend>
+      <div class="g2">
+        <div><label for="dAuthN">Author name</label><input type="text" id="dAuthN"></div>
+        <div><label for="dAuthT">Author title</label><input type="text" id="dAuthT"></div>
+        <div><label for="dAppN">Approver name</label><input type="text" id="dAppN"></div>
+        <div><label for="dAppT">Approver title</label><input type="text" id="dAppT"></div>
+        <div><label for="dClass">Classification</label><input type="text" id="dClass"></div>
+        <div><label for="dComp">Compliance standards (one per line)</label><textarea id="dComp" rows="3"></textarea></div>
+      </div></fieldset>
+    <div class="actions">
+      <button type="button" id="setupReset">Reset header/footer</button><span class="sp"></span>
+      <button type="button" id="setupCancel">Cancel</button><button type="button" id="setupSave" class="primary">Save</button>
+    </div>
+  </form>
+</dialog>
 
 <!-- Seed document. Plain-text script block avoids escaping problems with backticks and $ -->
 <script type="text/plain" id="seedDoc">
@@ -357,7 +452,8 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const STATUSES = ['DRAFT', 'PRELIMINARY', 'FOR REVIEW', 'APPROVED', 'RELEASED', 'OBSOLETE'];
-const state = { md: '', format: 'visual', mode: 'view', toc: [], meta: null, db: null, dbOK: true };
+const state = { md: '', format: 'visual', mode: 'view', toc: [], meta: null, db: null, dbOK: true,
+  dir: null, files: [], filePath: null, fileHandle: null, lastMod: 0, dirty: false, needsReconnect: false, pendingFile: null };
 
 /* ---------- Toast ---------- */
 let toastTimer;
@@ -406,18 +502,33 @@ function setSaveStatus(kind) {
   el.querySelector('span').textContent = kind === 'saving' ? 'Saving…' : kind === 'error' ? 'Not saved' : 'Saved';
 }
 
-async function persistNow() {
-  if (!state.db) { setSaveStatus('error'); return; }
-  try {
-    const parsed = parseDoc(state.md);
-    await DB.put(state.db, { id: 'active_document', markdown: state.md, meta: parsed.meta || null, updated: Date.now() });
-    setSaveStatus('saved');
-  } catch (e) {
-    console.error('IndexedDB write failed', e);
-    setSaveStatus('error');
-    toast('Autosave failed: ' + (e && e.message ? e.message : e) + ' (storage quota?)', true);
-  }
+/* Writes the editor text to IndexedDB (always) and to the linked file in the open folder (when edited). */
+async function writeFile(fh, text) {
+  const w = await fh.createWritable();
+  try { await w.write(text); } finally { await w.close(); }
+  state.lastMod = (await fh.getFile()).lastModified;
 }
+async function doPersist() {
+  const snap = state.md;
+  let failed = false;
+  if (state.db) {
+    try {
+      const parsed = parseDoc(snap);
+      await DB.put(state.db, { id: 'active_document', markdown: snap, meta: parsed.meta || null, updated: Date.now() });
+    } catch (e) {
+      failed = true;
+      console.error('IndexedDB write failed', e);
+      toast('Autosave failed: ' + (e && e.message ? e.message : e) + ' (storage quota?)', true);
+    }
+  }
+  if (state.fileHandle && state.dirty) {
+    try { await writeFile(state.fileHandle, snap); if (state.md === snap) state.dirty = false; }
+    catch (e) { failed = true; console.error('File write failed', e); toast('Could not write ' + state.filePath + ': ' + (e && e.message ? e.message : e), true); }
+  }
+  setSaveStatus(failed || (!state.db && !state.fileHandle) ? 'error' : 'saved');
+}
+let saveChain = Promise.resolve();      // serialise saves so two writes never overlap
+function persistNow() { saveChain = saveChain.then(doPersist).catch((e) => console.error(e)); return saveChain; }
 const persistDebounced = debounce(persistNow, 400);
 
 /* =====================================================================
@@ -461,7 +572,7 @@ function parseDoc(text) {
     // CORE_SCHEMA keeps YYYY-MM-DD as a string instead of a Date object
     meta = jsyaml.load(yamlText, { schema: jsyaml.CORE_SCHEMA });
   } catch (e) {
-    return { meta: null, warnings: ['YAML error: ' + (e.reason || e.message)], body };
+    return { meta: null, warnings: ['YAML error: ' + (e.reason || e.message)], body, yamlError: true };
   }
   const warnings = validateMeta(meta);
   if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
@@ -594,8 +705,9 @@ const stripData = (s) => s.replace(/\(data:[^)\s]*\)/g, '(data:)');
 /* =====================================================================
    Document card (screen) and rendering
    ===================================================================== */
-function docCardHTML(meta, warnings) {
-  if (!meta) return warnings.length ? `<div class="doccard"><div class="warnbox"><b>Frontmatter problem</b><ul>${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div></div>` : '';
+function docCardHTML(meta, warnings, canFix) {
+  const fix = canFix ? '<button type="button" class="fix-fm">Fill missing fields with defaults</button>' : '';
+  if (!meta) return warnings.length ? `<div class="doccard"><div class="warnbox"><b>Frontmatter problem</b><ul>${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>${fix}</div></div>` : '';
   const r = activeRev(meta);
   return `<div class="doccard">
     <div class="t">${esc(meta.title || 'Untitled')}</div>
@@ -604,7 +716,7 @@ function docCardHTML(meta, warnings) {
       <span>Rev <b>${esc(r ? r.rev : '—')}</b>${r ? ' · ' + esc(r.date) : ''}</span>
       <span>Author: ${esc(meta.author && meta.author.name)}</span><span>Approver: ${esc(meta.approver && meta.approver.name)}</span></div>
     ${Array.isArray(meta.compliance) && meta.compliance.length ? `<div class="m">Standards: ${meta.compliance.map(esc).join(' · ')}</div>` : ''}
-    ${warnings.length ? `<div class="warnbox"><b>Frontmatter issues</b><ul>${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
+    ${warnings.length ? `<div class="warnbox"><b>Frontmatter issues</b><ul>${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>${fix}</div>` : ''}
   </div>`;
 }
 
@@ -624,7 +736,7 @@ function refresh() {
       res = renderBody(parsed.body, { interactive: state.mode === 'edit' });
       const p = $('#preview');
       const keep = p.scrollTop;
-      p.innerHTML = `<div class="page doc">${docCardHTML(parsed.meta, parsed.warnings)}${res.html}</div>`;
+      p.innerHTML = `<div class="page doc">${docCardHTML(parsed.meta, parsed.warnings, !parsed.yamlError)}${res.html}</div>`;
       p.scrollTop = keep;
     } else {
       res = renderBody(stripData(parsed.body), { light: true });
@@ -704,6 +816,7 @@ $('#tocList').addEventListener('click', (e) => { const a = e.target.closest('a')
 /* Editor input */
 $('#editor').addEventListener('input', () => {
   state.md = $('#editor').value;
+  state.dirty = true;
   setSaveStatus('saving');
   persistDebounced();
   refreshDebounced();
@@ -743,6 +856,7 @@ function toggleTask(n) {
 
 function setMarkdown(text, { fromUser = false, seed = false } = {}) {
   state.md = text;
+  state.dirty = !seed;
   $('#editor').value = text;
   if (!seed) { setSaveStatus('saving'); persistDebounced(); }
   fromUser ? refreshDebounced() : refresh();
@@ -829,6 +943,8 @@ $('#fileOpen').addEventListener('change', async (e) => {
   if (!f) return;
   try {
     const text = await f.text();
+    if (state.dirty) await persistNow();
+    state.fileHandle = null; state.filePath = null; updateFileLabel(); renderFiles();   // imported file is not linked to the folder
     setMarkdown(text);
     await persistNow();
     toast('Opened ' + f.name);
@@ -845,9 +961,11 @@ function buildPrint() {
   const m = parsed.meta || {};
   const r = activeRev(parsed.meta) || { rev: '—', date: '' };
   const status = m.status || 'NO STATUS';
-  const cls = m.classification || 'Uncontrolled when printed';
+  const cls = m.classification || settings.defaults.classification;
+  const pg = effectivePage(parsed.meta);
+  const vals = printVals(parsed.meta);
   const res = renderBody(parsed.body, { prefix: 'p-' });
-  const watermark = status === 'DRAFT' || status === 'FOR REVIEW';
+  const watermark = pg.watermark && (status === 'DRAFT' || status === 'FOR REVIEW');
   const signed = status === 'APPROVED' || status === 'RELEASED';
 
   const person = (label, p, date, sign) => `<div class="cv-box"><h3>${label}</h3><div class="nm">${esc(p && p.name)}</div><div>${esc(p && p.title)}</div>
@@ -881,18 +999,23 @@ function buildPrint() {
   // Running headers/footers are page-margin boxes (Chromium 131+). Literal strings are injected here because
   // margin boxes cannot read document text. Cover page ("cover" named page) suppresses all four.
   const rule = '0.4pt solid #94a3b8';
-  const box = 'font: 8.5pt Arial, Helvetica, sans-serif; color: #334155;';
+  const box = `font: ${pg.font_size}pt Arial, Helvetica, sans-serif; color: #334155;`;
+  const mb = (pos, tpl) => {
+    const edge = pos.startsWith('top') ? 'bottom' : 'top';
+    return `@${pos} { content: ${tplToCss(tpl, vals)}; ${box} ${pg.rule ? `border-${edge}: ${rule}; padding-${edge}: 2mm;` : ''} }`;
+  };
+  const noCover = pg.on_cover ? '' : `@page cover { @top-left{content:none;border:0} @top-center{content:none;border:0} @top-right{content:none;border:0}
+                  @bottom-left{content:none;border:0} @bottom-center{content:none;border:0} @bottom-right{content:none;border:0} }`;
   $('#printPageStyle').textContent = `@media print {
     @page { size: A4;
-      @top-left { content: ${cssStr((m.doc_number || '') + (m.title ? '  ·  ' + m.title : ''))}; ${box} border-bottom: ${rule}; padding-bottom: 2mm; }
-      @top-center { content: ""; border-bottom: ${rule}; }
-      @top-right { content: ${cssStr('Rev ' + r.rev)}; ${box} border-bottom: ${rule}; padding-bottom: 2mm; }
-      @bottom-left { content: ${cssStr(status + '  ·  ' + cls)}; ${box} border-top: ${rule}; padding-top: 2mm; }
-      @bottom-center { content: ""; border-top: ${rule}; }
-      @bottom-right { content: "Page " counter(page) " of " counter(pages); ${box} border-top: ${rule}; padding-top: 2mm; }
+      ${mb('top-left', pg.header_left)}
+      ${mb('top-center', pg.header_centre)}
+      ${mb('top-right', pg.header_right)}
+      ${mb('bottom-left', pg.footer_left)}
+      ${mb('bottom-center', pg.footer_centre)}
+      ${mb('bottom-right', pg.footer_right)}
     }
-    @page cover { @top-left{content:none;border:0} @top-center{content:none;border:0} @top-right{content:none;border:0}
-                  @bottom-left{content:none;border:0} @bottom-center{content:none;border:0} @bottom-right{content:none;border:0} }
+    ${noCover}
   }`;
 }
 
@@ -928,6 +1051,348 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 /* =====================================================================
    Seed + boot
    ===================================================================== */
+/* =====================================================================
+   Settings: header/footer + new-document defaults
+   ===================================================================== */
+const SETTINGS_KEY = 'engdocs.settings.v1';
+const DEFAULT_SETTINGS = {
+  page: {
+    header_left: '{doc_number}  ·  {title}', header_centre: '', header_right: 'Rev {rev}',
+    footer_left: '{status}  ·  {classification}', footer_centre: '', footer_right: 'Page {page} of {pages}',
+    font_size: 8.5, rule: true, on_cover: false, watermark: true,
+  },
+  defaults: {
+    authorName: 'Author Name', authorTitle: 'Engineer', approverName: 'Approver Name', approverTitle: 'Engineering Manager',
+    classification: 'Uncontrolled when printed', compliance: ['ISO 9001:2015'],
+  },
+};
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    return { page: { ...DEFAULT_SETTINGS.page, ...s.page }, defaults: { ...DEFAULT_SETTINGS.defaults, ...s.defaults } };
+  } catch { return { page: { ...DEFAULT_SETTINGS.page }, defaults: { ...DEFAULT_SETTINGS.defaults } }; }
+}
+let settings = loadSettings();
+function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { toast('Could not store settings: ' + e.message, true); } }
+
+/* A document's own page_setup (frontmatter) overrides the browser-wide setting */
+function effectivePage(meta) {
+  const o = meta && meta.page_setup && typeof meta.page_setup === 'object' && !Array.isArray(meta.page_setup) ? meta.page_setup : {};
+  const pg = { ...settings.page, ...o };
+  pg.font_size = Math.min(14, Math.max(6, parseFloat(pg.font_size) || 8.5));
+  return pg;
+}
+function printVals(meta) {
+  const m = meta || {}, r = activeRev(m);
+  return {
+    doc_number: m.doc_number || '', title: m.title || '', rev: r ? r.rev : '—', status: m.status || '',
+    classification: m.classification || settings.defaults.classification, date: m.date || '',
+    author: (m.author && m.author.name) || '', approver: (m.approver && m.approver.name) || '', today: today(),
+  };
+}
+/* "Page {page} of {pages}" → `"Page " counter(page) " of " counter(pages)` for @page margin boxes */
+function tplToCss(tpl, vals) {
+  const parts = [];
+  const lit = (s) => { if (s) parts.push(cssStr(s)); };
+  const re = /\{(\w+)\}/g;
+  let last = 0, m;
+  tpl = String(tpl ?? '');
+  while ((m = re.exec(tpl))) {
+    lit(tpl.slice(last, m.index));
+    const k = m[1];
+    if (k === 'page') parts.push('counter(page)');
+    else if (k === 'pages') parts.push('counter(pages)');
+    else if (k in vals) lit(String(vals[k] ?? ''));
+    else lit(m[0]);
+    last = re.lastIndex;
+  }
+  lit(tpl.slice(last));
+  return parts.length ? parts.join(' ') : '""';
+}
+
+/* =====================================================================
+   New-document template + "fill missing frontmatter"
+   ===================================================================== */
+function today() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+const dumpYaml = (o) => jsyaml.dump(o, { schema: jsyaml.CORE_SCHEMA, lineWidth: -1, noRefs: true });
+const titleFromName = (p) => p.split('/').pop().replace(/\.(md|markdown)$/i, '').replace(/[-_]+/g, ' ').trim() || 'Untitled Document';
+const nextDocNo = () => `DOC-ENG-${new Date().getFullYear()}-${String(state.files.length + 1).padStart(3, '0')}`;
+
+function defaultMeta({ title = 'Untitled Document', docNo } = {}) {
+  const d = settings.defaults, t = today();
+  return {
+    doc_number: docNo || nextDocNo(), title, date: t, status: 'DRAFT', classification: d.classification,
+    author: { name: d.authorName, title: d.authorTitle },
+    approver: { name: d.approverName, title: d.approverTitle },
+    compliance: d.compliance.slice(),
+    revisions: [{ rev: 'A', date: t, author: d.authorName, approver: d.approverName, ecn: '', description: 'Initial issue.' }],
+  };
+}
+function newDocTemplate(title, docNo) {
+  return `---\n${dumpYaml(defaultMeta({ title, docNo }))}---\n\n# Introduction\n\nStart writing here. Edit the frontmatter above (document number, author, standards, revisions) first.\n`;
+}
+function guessTitle(body) {
+  const m = body.match(/^#\s+(.+)$/m);
+  if (m) return m[1].trim();
+  return state.filePath ? titleFromName(state.filePath) : 'Untitled Document';
+}
+
+/* Keeps everything the user already typed; only adds what is missing */
+function completeFrontmatter() {
+  if (state.mode !== 'edit') { toast('Switch to Edit mode to fill in the frontmatter.', true); return; }
+  const p = parseDoc(state.md);
+  if (p.yamlError) { toast('Fix the YAML syntax error first.', true); return; }
+  const fm = splitFrontmatter(state.md);
+  const base = p.meta && typeof p.meta === 'object' ? p.meta : {};
+  const def = defaultMeta({ title: guessTitle(p.body) });
+  const out = {};
+  for (const k of ['doc_number', 'title', 'date', 'status', 'classification', 'author', 'approver', 'compliance', 'revisions']) {
+    let v = base[k];
+    if (k === 'author' || k === 'approver') {
+      const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+      v = { ...o, name: o.name || def[k].name, title: o.title || def[k].title };
+    } else if (k === 'compliance') {
+      v = Array.isArray(v) && v.length ? v : def.compliance;
+    } else if (k === 'revisions') {
+      v = Array.isArray(v) && v.length
+        ? v.map((r) => ({ ...r, rev: r.rev || 'A', date: r.date || def.date, author: r.author || out.author.name, approver: r.approver || out.approver.name, description: r.description || 'Revision entry.' }))
+        : def.revisions;
+    } else if (v === undefined || v === null || v === '') v = def[k];
+    out[k] = v;
+  }
+  for (const k of Object.keys(base)) if (!(k in out)) out[k] = base[k];
+  const head = `---\n${dumpYaml(out)}---\n`;
+  setMarkdown(head + (fm.yamlText === null ? '\n' + state.md : fm.body), { fromUser: true });
+  toast('Missing fields filled with defaults – review and edit them.');
+}
+document.addEventListener('click', (e) => { if (e.target.closest('.fix-fm')) completeFrontmatter(); });
+
+/* =====================================================================
+   Local folder workspace (File System Access API – Chromium browsers)
+   ===================================================================== */
+const FS_OK = typeof window.showDirectoryPicker === 'function';
+
+function updateFileLabel() {
+  $('#fileLabel').textContent = state.filePath ? '📄 ' + state.filePath : state.dir ? 'Not linked to a file' : 'Browser storage';
+}
+function showPane(name) {
+  $('#filesPane').style.display = name === 'files' ? '' : 'none';
+  $('#tocPane').style.display = name === 'toc' ? '' : 'none';
+  $('#sidebar .side-tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.pane === name));
+}
+async function saveFolderRecord() {
+  if (!state.db || !state.dir) return;
+  try { await DB.put(state.db, { id: 'folder_handle', handle: state.dir, lastFile: state.filePath || null }); }
+  catch (e) { console.warn('Could not remember folder', e); }
+}
+async function scanFolder() {
+  const out = [];
+  async function walk(dir, prefix, depth) {
+    for await (const [name, handle] of dir.entries()) {
+      if (name.startsWith('.') || name === 'node_modules') continue;
+      if (handle.kind === 'directory') { if (depth < 5) await walk(handle, prefix + name + '/', depth + 1); }
+      else if (/\.(md|markdown)$/i.test(name)) out.push({ path: prefix + name, name, handle });
+    }
+  }
+  try { await walk(state.dir, '', 0); }
+  catch (e) { console.error(e); toast('Could not read folder: ' + e.message, true); }
+  out.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }));
+  state.files = out;
+  renderFiles();
+}
+function renderFiles() {
+  const el = $('#filesPane');
+  if (!FS_OK) { el.innerHTML = '<div class="fp-msg">Folder access needs Chrome, Edge or Brave. Documents are still saved in this browser.</div>'; return; }
+  if (!state.dir) { el.innerHTML = '<div class="fp-msg">No folder open. Open a folder and your documents are saved there as .md files.<br><button class="btn2" data-act="open">Open Folder</button></div>'; return; }
+  if (state.needsReconnect) { el.innerHTML = `<div class="fp-msg">Folder “${esc(state.dir.name)}” needs permission again after the browser restarted.<br><button class="btn2" data-act="reconnect">Reconnect</button> <button class="btn2" data-act="open" style="background:#64748b">Other folder…</button></div>`; return; }
+  let html = `<div class="fp-head"><span title="${esc(state.dir.name)}">📁 ${esc(state.dir.name)}</span><span><button data-act="new" title="New document">＋</button><button data-act="refresh" title="Rescan folder">⟳</button><button data-act="open" title="Open a different folder">…</button></span></div>`;
+  let lastDir = '';
+  for (const f of state.files) {
+    const i = f.path.lastIndexOf('/'), dir = i < 0 ? '' : f.path.slice(0, i);
+    if (dir !== lastDir) { if (dir) html += `<div class="fp-dir">${esc(dir)}</div>`; lastDir = dir; }
+    html += `<a href="#" data-path="${esc(f.path)}" class="fp-file${f.path === state.filePath ? ' on' : ''}${dir ? ' in' : ''}" title="${esc(f.path)}">${esc(f.name)}</a>`;
+  }
+  if (!state.files.length) html += '<div class="fp-msg">No .md files yet. Use ＋ to create one.</div>';
+  el.innerHTML = html;
+}
+async function openFileEntry(entry) {
+  if (state.dirty) await persistNow();
+  const file = await entry.handle.getFile();
+  const text = await file.text();
+  state.fileHandle = entry.handle; state.filePath = entry.path; state.lastMod = file.lastModified;
+  setMarkdown(text, { seed: true });
+  updateFileLabel(); renderFiles();
+  saveFolderRecord();
+  if (state.db) DB.put(state.db, { id: 'active_document', markdown: text, meta: state.meta || null, updated: Date.now() }).catch(() => {});
+  setSaveStatus('saved');
+}
+async function createDocFile(raw, content) {
+  const segs = raw.replace(/\\/g, '/').split('/').map((s) => s.trim()).filter(Boolean);
+  if (!segs.length || segs.some((s) => s === '.' || s === '..' || /[<>:"|?*\x00-\x1f]/.test(s))) throw new Error('Invalid file name.');
+  let last = segs.pop();
+  if (!/\.(md|markdown)$/i.test(last)) last += '.md';
+  let dir = state.dir;
+  for (const s of segs) dir = await dir.getDirectoryHandle(s, { create: true });
+  try { await dir.getFileHandle(last); throw new Error('A file with that name already exists.'); }
+  catch (e) { if (e.name !== 'NotFoundError') throw e; }
+  const fh = await dir.getFileHandle(last, { create: true });
+  await writeFile(fh, content);
+  await scanFolder();
+  return state.files.find((f) => f.path === [...segs, last].join('/'));
+}
+async function openFolder() {
+  if (!FS_OK) { toast('Folder access needs Chrome, Edge or Brave.', true); return; }
+  try {
+    const h = await window.showDirectoryPicker({ id: 'engdocs', mode: 'readwrite' });
+    const prevMd = state.md, hadUnlinked = !state.fileHandle && prevMd.trim();
+    if (state.dirty) await persistNow();
+    state.dir = h; state.needsReconnect = false; state.pendingFile = null; state.fileHandle = null; state.filePath = null;
+    await scanFolder(); showPane('files'); updateFileLabel(); await saveFolderRecord();
+    if (hadUnlinked && confirm(`Save the document currently in the editor into “${h.name}” as a new file?`)) {
+      const pm = parseDoc(prevMd).meta;
+      const name = prompt('File name:', ((pm && pm.doc_number) || 'document').replace(/[^\w.\-]+/g, '_'));
+      if (name && name.trim()) await openFileEntry(await createDocFile(name, prevMd));
+    }
+  } catch (e) { if (e.name !== 'AbortError') { console.error(e); toast('Could not open folder: ' + e.message, true); } }
+}
+async function activateFolder() {
+  state.needsReconnect = false;
+  await scanFolder(); showPane('files');
+  if (state.pendingFile) {
+    const f = state.files.find((x) => x.path === state.pendingFile);
+    state.pendingFile = null;
+    if (f) await openFileEntry(f);
+  }
+  updateFileLabel();
+}
+async function restoreFolder() {
+  if (!FS_OK || !state.db) return;
+  try {
+    const rec = await DB.get(state.db, 'folder_handle');
+    if (!rec || !rec.handle) return;
+    state.dir = rec.handle; state.pendingFile = rec.lastFile || null;
+    if ((await rec.handle.queryPermission({ mode: 'readwrite' })) === 'granted') await activateFolder();
+    else { state.needsReconnect = true; renderFiles(); showPane('files'); updateFileLabel(); }
+  } catch (e) { console.warn('Could not restore folder', e); }
+}
+async function newDocument() {
+  try {
+    if (!state.dir || state.needsReconnect) {
+      if (state.dirty) await persistNow();
+      if (!confirm('No folder is open, so the new document replaces the one in the editor. Download the current one first if you need a copy. Continue?')) return;
+      state.fileHandle = null; state.filePath = null;
+      setMarkdown(newDocTemplate('Untitled Document', nextDocNo()), { fromUser: true });
+      state.mode = 'edit'; updateFileLabel(); renderFiles(); applyLayout();
+      return;
+    }
+    const raw = prompt('New document name (use folder/name to place it in a subfolder):', 'new-document');
+    if (!raw || !raw.trim()) return;
+    if (state.dirty) await persistNow();
+    const lastSeg = raw.replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'Untitled Document';
+    const entry = await createDocFile(raw, newDocTemplate(titleFromName(lastSeg), nextDocNo()));
+    await openFileEntry(entry);
+    state.mode = 'edit'; applyLayout();
+    toast('Created ' + entry.path);
+  } catch (e) { console.error(e); toast('Could not create document: ' + e.message, true); }
+}
+$('#btnFolder').addEventListener('click', openFolder);
+$('#btnFolder').disabled = !FS_OK;
+if (!FS_OK) $('#btnFolder').title = 'Needs Chrome, Edge or Brave (File System Access API)';
+$('#btnNew').addEventListener('click', newDocument);
+$('#sidebar .side-tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) showPane(b.dataset.pane); });
+$('#filesPane').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const act = e.target.closest('[data-act]'), a = e.target.closest('a[data-path]');
+  try {
+    if (act) {
+      const k = act.dataset.act;
+      if (k === 'open') await openFolder();
+      else if (k === 'new') await newDocument();
+      else if (k === 'refresh') await scanFolder();
+      else if (k === 'reconnect') { if ((await state.dir.requestPermission({ mode: 'readwrite' })) === 'granted') await activateFolder(); else toast('Permission was not granted.', true); }
+    } else if (a) {
+      const f = state.files.find((x) => x.path === a.dataset.path);
+      if (f && f.path !== state.filePath) await openFileEntry(f);
+    }
+  } catch (err) { console.error(err); toast(err.message, true); }
+});
+/* Pick up edits made to the file by other programs while this window was in the background */
+window.addEventListener('focus', async () => {
+  if (!state.fileHandle || state.dirty) return;
+  try {
+    const f = await state.fileHandle.getFile();
+    if (f.lastModified > state.lastMod) {
+      state.lastMod = f.lastModified;
+      const text = await f.text();
+      if (text !== state.md) { setMarkdown(text, { seed: true }); toast('Reloaded – the file changed on disk.'); }
+    }
+  } catch (e) { console.warn(e); }
+});
+
+/* =====================================================================
+   Page Setup dialog
+   ===================================================================== */
+const SETUP_FIELDS = { header_left: '#sHL', header_centre: '#sHC', header_right: '#sHR', footer_left: '#sFL', footer_centre: '#sFC', footer_right: '#sFR' };
+function fillSetup(pg) {
+  for (const [k, sel] of Object.entries(SETUP_FIELDS)) $(sel).value = pg[k] ?? '';
+  $('#sSize').value = pg.font_size; $('#sRule').checked = !!pg.rule; $('#sCover').checked = !!pg.on_cover; $('#sWm').checked = !!pg.watermark;
+}
+function readSetup() {
+  const pg = {};
+  for (const [k, sel] of Object.entries(SETUP_FIELDS)) pg[k] = $(sel).value;
+  pg.font_size = Math.min(14, Math.max(6, parseFloat($('#sSize').value) || 8.5));
+  pg.rule = $('#sRule').checked; pg.on_cover = $('#sCover').checked; pg.watermark = $('#sWm').checked;
+  return pg;
+}
+function updateSetupPreview() {
+  const pg = readSetup(), v = { ...printVals(state.meta), page: '3', pages: '7' };
+  const sub = (s) => String(s).replace(/\{(\w+)\}/g, (x, k) => (k in v ? v[k] : x));
+  const row = (a, b, c, edge) => `<div class="pv-row" style="font-size:${pg.font_size}pt;${pg.rule ? `border-${edge}:1px solid #94a3b8;` : ''}"><span>${esc(sub(a))}</span><span>${esc(sub(b))}</span><span>${esc(sub(c))}</span></div>`;
+  $('#setupPreview').innerHTML = row(pg.header_left, pg.header_centre, pg.header_right, 'bottom') + '<div class="pv-body">page content</div>' + row(pg.footer_left, pg.footer_centre, pg.footer_right, 'top');
+}
+function openSetup() {
+  fillSetup(effectivePage(state.meta));
+  const d = settings.defaults;
+  $('#dAuthN').value = d.authorName; $('#dAuthT').value = d.authorTitle; $('#dAppN').value = d.approverName; $('#dAppT').value = d.approverTitle;
+  $('#dClass').value = d.classification; $('#dComp').value = d.compliance.join('\n');
+  const hasMeta = !!state.meta;
+  $('#sScopeDoc').disabled = !hasMeta;
+  (hasMeta ? $('#sScopeDoc') : $('#sScopeGlobal')).checked = true;
+  updateSetupPreview();
+  $('#dlgSetup').showModal();
+}
+function saveSetup() {
+  const pg = readSetup();
+  const scope = document.querySelector('input[name=sScope]:checked').value;
+  const dflt = {
+    authorName: $('#dAuthN').value.trim() || DEFAULT_SETTINGS.defaults.authorName, authorTitle: $('#dAuthT').value.trim() || DEFAULT_SETTINGS.defaults.authorTitle,
+    approverName: $('#dAppN').value.trim() || DEFAULT_SETTINGS.defaults.approverName, approverTitle: $('#dAppT').value.trim() || DEFAULT_SETTINGS.defaults.approverTitle,
+    classification: $('#dClass').value.trim() || DEFAULT_SETTINGS.defaults.classification,
+    compliance: $('#dComp').value.split('\n').map((s) => s.trim()).filter(Boolean),
+  };
+  if (scope === 'doc') {
+    if (state.mode !== 'edit') { toast('Switch to Edit mode to store the page setup in this document.', true); return; }
+    const p = parseDoc(state.md);
+    if (p.yamlError || !p.meta) { toast('This document needs valid frontmatter first (use “Fill missing fields”).', true); return; }
+    const fm = splitFrontmatter(state.md);
+    p.meta.page_setup = pg;
+    setMarkdown(`---\n${dumpYaml(p.meta)}---\n${fm.body}`, { fromUser: true });
+  } else {
+    settings.page = pg;
+    if (state.meta && state.meta.page_setup) toast('Saved – note this document has its own page setup, which takes priority.');
+    else toast('Settings saved.');
+  }
+  settings.defaults = dflt;
+  saveSettings();
+  $('#dlgSetup').close();
+}
+$('#btnSetup').addEventListener('click', openSetup);
+$('#setupSave').addEventListener('click', saveSetup);
+$('#setupCancel').addEventListener('click', () => $('#dlgSetup').close());
+$('#setupReset').addEventListener('click', () => { fillSetup(DEFAULT_SETTINGS.page); updateSetupPreview(); });
+$('#setupForm').addEventListener('input', updateSetupPreview);
+$('#setupForm').addEventListener('submit', (e) => e.preventDefault());
+
 function sampleDiagram() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 220" font-family="Arial" font-size="14">
 <rect width="640" height="220" fill="#fff"/>
@@ -957,6 +1422,8 @@ async function boot() {
   }
   if (!state.db) setSaveStatus('error');
   applyLayout();
+  updateFileLabel(); renderFiles();
+  await restoreFolder();
 }
 boot();
 </script>
