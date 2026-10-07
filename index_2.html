@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engineering Document &amp; Note Manager</title>
+<meta name="theme-color" content="#0f172a">
+<!-- Manifest: standalone file (a data: URI manifest cannot resolve start_url and is not reliably installable) -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27%3E%3Crect width=%27512%27 height=%27512%27 fill=%27%230f172a%27/%3E%3Ctext x=%27256%27 y=%27330%27 font-size=%27240%27 text-anchor=%27middle%27 fill=%27%23fff%27 font-family=%27Arial%27 font-weight=%27bold%27%3EED%3C/text%3E%3C/svg%3E">
+
+<!-- ===== CDN stylesheets (all pre-cached by sw.js) ===== -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+/* ============ Base / layout (kept in plain CSS so the shell works even if Tailwind is unavailable) ============ */
+:root { --hdr: #0f172a; --line: #e2e8f0; --muted: #64748b; --accent: #2563eb; --side-w: 280px; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #0f172a; background: #f1f5f9; }
+#app { display: flex; flex-direction: column; height: 100vh; }
+#printRoot { display: none; }
+
+header.toolbar { background: var(--hdr); color: #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; }
+header.toolbar .brand { font-weight: 700; letter-spacing: .02em; margin-right: 8px; white-space: nowrap; }
+.btn { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 5px 10px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: #334155; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.seg { display: inline-flex; border: 1px solid #334155; border-radius: 6px; overflow: hidden; }
+.seg button { background: #1e293b; color: #cbd5e1; border: 0; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+.seg button.on { background: var(--accent); color: #fff; }
+.seg-label { font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-right: 4px; }
+.spacer { flex: 1; }
+#saveStatus { font-size: 12px; color: #94a3b8; display: inline-flex; align-items: center; gap: 6px; min-width: 70px; }
+#saveStatus i { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; }
+#saveStatus.saving i { background: #f59e0b; }
+#saveStatus.error i { background: #ef4444; }
+#issuesBadge { background: #b45309; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 12px; cursor: pointer; border: 0; }
+
+#main { flex: 1; display: flex; min-height: 0; }
+#sidebar { width: var(--side-w); min-width: 160px; max-width: 60vw; background: #fff; border-right: 1px solid var(--line); overflow: auto; padding: 10px 0; }
+#sidebar h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 0 14px 6px; margin: 0; }
+#tocList a { display: block; padding: 3px 14px; font-size: 13px; color: #334155; text-decoration: none; border-left: 3px solid transparent; line-height: 1.35; }
+#tocList a:hover { background: #f1f5f9; border-left-color: var(--accent); }
+#tocList a .num { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+#tocList a.l2 { padding-left: 26px; } #tocList a.l3 { padding-left: 38px; font-size: 12.5px; } #tocList a.l4 { padding-left: 50px; font-size: 12px; color: #64748b; }
+#tocEmpty { padding: 6px 14px; color: var(--muted); font-size: 13px; }
+#divider { width: 5px; cursor: col-resize; background: var(--line); flex: none; }
+#divider:hover, #divider.drag { background: var(--accent); }
+#content { flex: 1; display: flex; min-width: 0; background: #fff; }
+#editorWrap, #previewWrap { flex: 1; min-width: 0; display: none; overflow: hidden; }
+#content[data-layout="raw"] #editorWrap, #content[data-layout="visual-view"] #previewWrap,
+#content[data-layout="visual-edit"] #editorWrap, #content[data-layout="visual-edit"] #previewWrap { display: block; }
+#content[data-layout="visual-edit"] #editorWrap { border-right: 1px solid var(--line); }
+#editor { width: 100%; height: 100%; border: 0; outline: 0; resize: none; padding: 16px 20px; font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 2; white-space: pre; overflow: auto; background: #fff; color: #0f172a; }
+#editor[readonly] { background: #f8fafc; }
+#preview { height: 100%; overflow: auto; padding: 24px 32px 80px; scroll-padding-top: 16px; }
+#preview > .page { max-width: 860px; margin: 0 auto; }
+
+/* ============ Document typography (screen + print share this) ============ */
+.doc { line-height: 1.6; font-size: 15px; color: #0f172a; overflow-wrap: anywhere; }
+.doc h1, .doc h2, .doc h3, .doc h4, .doc h5, .doc h6 { font-weight: 700; line-height: 1.25; margin: 1.5em 0 .5em; break-after: avoid; }
+.doc h1 { font-size: 1.6em; border-bottom: 2px solid #0f172a; padding-bottom: .2em; }
+.doc h2 { font-size: 1.3em; } .doc h3 { font-size: 1.12em; } .doc h4 { font-size: 1em; color: #334155; }
+.doc .hnum { display: inline-block; min-width: 3.2em; color: #475569; font-variant-numeric: tabular-nums; }
+.doc p { margin: .7em 0; }
+.doc a { color: var(--accent); }
+.doc img { max-width: 100%; height: auto; display: inline-block; break-inside: avoid; }
+.doc blockquote { margin: 1em 0; padding: .4em 1em; border-left: 4px solid #94a3b8; background: #f8fafc; color: #334155; break-inside: avoid; }
+.doc ul, .doc ol { padding-left: 1.6em; margin: .6em 0; }
+.doc li > input.task { margin-right: .5em; }
+.doc ul:has(> li > input.task) { list-style: none; padding-left: .4em; }
+.doc table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: .92em; }
+.doc th, .doc td { border: 1px solid #cbd5e1; padding: 5px 9px; text-align: left; vertical-align: top; }
+.doc th { background: #f1f5f9; }
+.doc thead { display: table-header-group; }
+.doc tr { break-inside: avoid; }
+.doc :not(pre) > code { background: #f1f5f9; padding: .1em .35em; border-radius: 4px; font-size: .9em; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.doc hr { border: 0; border-top: 1px solid #cbd5e1; margin: 1.5em 0; }
+.math-block { display: block; text-align: center; margin: 1em 0; overflow-x: auto; overflow-y: hidden; break-inside: avoid; max-width: 100%; }
+.math-err { color: #dc2626; font-family: ui-monospace, Menlo, monospace; }
+.katex-display { margin: 0; }
+
+/* Code blocks */
+.codeblock { position: relative; margin: 1em 0; border: 1px solid var(--line); border-radius: 6px; background: #f8fafc; break-inside: avoid; }
+.codeblock .lang { position: absolute; top: 4px; right: 70px; font-size: 11px; text-transform: uppercase; color: #94a3b8; }
+.codeblock .copy-btn { position: absolute; top: 4px; right: 6px; font-size: 11px; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 7px; cursor: pointer; color: #475569; }
+.codeblock pre { margin: 0; padding: 10px 12px 10px 0; display: flex; overflow-x: auto; background: transparent !important; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-shadow: none !important; }
+.codeblock .ln { flex: none; padding: 0 10px 0 12px; margin-right: 10px; border-right: 1px solid #cbd5e1; color: #94a3b8; text-align: right; user-select: none; white-space: pre; }
+.codeblock code { background: transparent !important; text-shadow: none !important; white-space: pre; font: inherit; }
+
+/* Document card (screen only) */
+.doccard { border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; background: #f8fafc; }
+.doccard .t { font-size: 20px; font-weight: 700; }
+.doccard .m { font-size: 13px; color: #475569; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.warnbox { background: #fffbeb; border: 1px solid #f59e0b; color: #92400e; border-radius: 6px; padding: 8px 12px; margin-top: 10px; font-size: 13px; }
+.warnbox ul { margin: 4px 0 0; padding-left: 18px; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border: 1px solid; }
+.st-DRAFT { background: #e5e7eb; color: #374151; border-color: #9ca3af; }
+.st-PRELIMINARY { background: #dbeafe; color: #1e40af; border-color: #60a5fa; }
+.st-FOR-REVIEW { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+.st-APPROVED { background: #dcfce7; color: #166534; border-color: #22c55e; }
+.st-RELEASED { background: #bbf7d0; color: #14532d; border-color: #16a34a; }
+.st-OBSOLETE { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+.st-UNKNOWN { background: #fff; color: #475569; border-color: #94a3b8; }
+
+#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 50; max-width: 80vw; }
+#toast.show { opacity: 1; }
+#toast.err { background: #b91c1c; }
+
+@media (max-width: 760px) {
+  #sidebar { position: absolute; z-index: 20; top: 0; bottom: 0; left: 0; box-shadow: 4px 0 12px rgba(0,0,0,.2); }
+  #main { position: relative; }
+  #divider { display: none; }
+  #preview { padding: 16px; }
+  #content[data-layout="visual-edit"] { flex-direction: column; }
+}
+body.no-side #sidebar, body.no-side #divider { display: none; }
+
+/* ============ PRINT / PDF (strict A4) ============ */
+@media print {
+  html, body { height: auto; background: #fff; }
+  #app, #toast { display: none !important; }
+  #printRoot { display: block; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { size: A4; margin: 24mm 18mm 22mm 18mm; }
+  @page cover { margin: 20mm 18mm; }
+  #printRoot { font-size: 10.5pt; color: #000; }
+  #printRoot .doc { font-size: 10.5pt; line-height: 1.5; }
+  #printRoot .cover { page: cover; break-after: page; min-height: 250mm; }
+  #printRoot .docctl { break-after: page; }
+  #printRoot .doc h1 { break-before: auto; }
+  #printRoot .codeblock { background: #f8fafc; break-inside: avoid; }
+  #printRoot .codeblock .copy-btn { display: none; }
+  #printRoot .math-block, #printRoot table, #printRoot img, #printRoot blockquote { break-inside: avoid; }
+  #printRoot .math-block { overflow: visible; }
+  #printRoot thead { display: table-header-group; }
+  #printRoot tr { break-inside: avoid; }
+  .wm { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font: 900 100pt Arial, Helvetica, sans-serif; text-transform: uppercase; white-space: nowrap; color: rgba(0,0,0,.08); pointer-events: none; z-index: -1; }
+  .wm.long { font-size: 80pt; }
+}
+/* Cover + control pages (also used in print only, defined globally but #printRoot is hidden on screen) */
+#printRoot .cv-co { font-size: 11pt; letter-spacing: .25em; color: #475569; border-bottom: 3px solid #0f172a; padding-bottom: 6mm; margin-bottom: 30mm; }
+#printRoot .cv-title { font-size: 28pt; font-weight: 800; line-height: 1.15; margin: 0 0 6mm; }
+#printRoot .cv-docno { font-size: 15pt; font-family: ui-monospace, Menlo, Consolas, monospace; margin-bottom: 5mm; }
+#printRoot .cv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm 10mm; margin-top: 14mm; }
+#printRoot .cv-box { border: 1px solid #94a3b8; padding: 4mm 5mm; break-inside: avoid; }
+#printRoot .cv-box h3 { margin: 0 0 2mm; font-size: 9pt; text-transform: uppercase; letter-spacing: .1em; color: #475569; }
+#printRoot .cv-box .nm { font-weight: 700; font-size: 12pt; }
+#printRoot .cv-box .sg { margin-top: 8mm; border-top: 1px solid #000; font-size: 8.5pt; color: #475569; padding-top: 1mm; }
+#printRoot .cv-wide { grid-column: 1 / -1; }
+#printRoot .cv-box ul { margin: 0; padding-left: 5mm; }
+#printRoot .docctl h2.ctl { font-size: 14pt; border-bottom: 2px solid #0f172a; padding-bottom: 2mm; margin: 0 0 4mm; }
+#printRoot .docctl h2.ctl.second { margin-top: 10mm; }
+#printRoot .tocp { list-style: none; margin: 0; padding: 0; }
+#printRoot .tocp li { display: flex; align-items: baseline; gap: 6px; font-size: 10pt; padding: 1.2px 0; }
+#printRoot .tocp li .n { min-width: 14mm; color: #334155; font-variant-numeric: tabular-nums; }
+#printRoot .tocp li .dots { flex: 1; border-bottom: 1.2px dotted #64748b; transform: translateY(-3px); }
+#printRoot .tocp li.l1 { font-weight: 700; margin-top: 1.5mm; }
+#printRoot .tocp li.l2 { padding-left: 4mm; } #printRoot .tocp li.l3 { padding-left: 8mm; } #printRoot .tocp li.l4 { padding-left: 12mm; }
+#printRoot .tocp li a { color: inherit; text-decoration: none; }
+#printRoot .tocp li a::after { content: target-counter(attr(href url), page); } /* progressive enhancement: ignored where unsupported */
+</style>
+</head>
+
+<body>
+<div id="app">
+  <header class="toolbar">
+    <button class="btn" id="btnSide" title="Toggle table of contents">☰</button>
+    <span class="brand">EngDocs</span>
+
+    <span class="seg-label">Format</span>
+    <span class="seg" id="segFormat"><button data-v="raw">Raw Markdown</button><button data-v="visual" class="on">Visual</button></span>
+    <span class="seg-label">Mode</span>
+    <span class="seg" id="segMode"><button data-v="edit">Edit</button><button data-v="view" class="on">View-Only</button></span>
+
+    <button class="btn" id="btnImage" title="Insert image (also: drag &amp; drop, or paste)">Insert Image</button>
+    <button class="btn" id="btnOpen">Open .md</button>
+    <button class="btn" id="btnDownload">Download .md</button>
+    <button class="btn" id="btnPdf">Export to PDF</button>
+    <span class="spacer"></span>
+    <button id="issuesBadge" style="display:none"></button>
+    <span id="saveStatus"><i></i><span>Saved</span></span>
+    <button class="btn" id="btnInstall" style="display:none">⤓ Install</button>
+    <input type="file" id="fileImage" accept="image/*" hidden>
+    <input type="file" id="fileOpen" accept=".md,.markdown,.txt" hidden>
+  </header>
+
+  <div id="main">
+    <aside id="sidebar"><h2>Contents</h2><nav id="tocList"></nav><div id="tocEmpty" style="display:none">No headings yet.</div></aside>
+    <div id="divider" role="separator" aria-orientation="vertical"></div>
+    <section id="content" data-layout="visual-view">
+      <div id="editorWrap"><textarea id="editor" spellcheck="false" wrap="off" readonly aria-label="Markdown source"></textarea></div>
+      <div id="previewWrap"><div id="preview"></div></div>
+    </section>
+  </div>
+</div>
+
+<div id="printRoot" aria-hidden="true"></div>
+<style id="printPageStyle"></style>
+<div id="toast"></div>
+
+<!-- Seed document. Plain-text script block avoids escaping problems with backticks and $ -->
+<script type="text/plain" id="seedDoc">
+---
+doc_number: DOC-ENG-2026-001
+title: Exhaust Fan Speed Control – Design Note
+date: 2026-10-07
+status: DRAFT
+classification: Company Confidential
+author:
+  name: Nishit Upadhyay
+  title: Senior Product Development Engineer
+approver:
+  name: Alex Example
+  title: Engineering Manager
+compliance:
+  - ISO 9001:2015
+  - AS/NZS 2243.8
+  - AS 2252.2
+revisions:
+  - rev: "A"
+    date: 2026-09-20
+    author: N. Upadhyay
+    approver: A. Example
+    ecn: ECN-0412
+    description: Initial draft issued for internal review.
+  - rev: "0.2"
+    date: 2026-10-07
+    author: N. Upadhyay
+    approver: A. Example
+    ecn: ECN-0431
+    description: Added affinity-law sizing, PLC logic and firmware routine.
+---
+
+# Purpose and Scope
+
+This note records the sizing basis and control logic for the variable-speed exhaust fan serving the fume cupboard. It covers fan performance scaling, beam loading on the support frame, the PLC speed-control routine and the monitoring firmware.
+
+> **Note:** Values in this document are illustrative sample data used to demonstrate the document system.
+
+## Applicable Standards
+
+The design is intended to comply with the standards listed on the cover page. Key requirements are summarised below.
+
+| Standard | Topic | Relevance |
+|---|---|---|
+| ISO 9001:2015 | Quality management | Document control and revision history |
+| AS/NZS 2243.8 | Laboratory safety – fume cupboards | Face velocity and containment |
+| AS 2252.2 | Biological safety cabinets | Airflow verification |
+
+# Fan Performance Scaling
+
+## Affinity Laws
+
+For a fixed system, flow rate scales linearly with shaft speed, so $Q_2 = Q_1 \,(N_2 / N_1)$. Pressure scales with the square of speed and power with the cube:
+
+$$\frac{P_2}{P_1} = \left(\frac{N_2}{N_1}\right)^2, \qquad \frac{W_2}{W_1} = \left(\frac{N_2}{N_1}\right)^3$$
+
+## Flow Rate and Face Velocity
+
+Volumetric flow through the sash opening is given by \(Q = A \cdot v\), where $A$ is the open face area and $v$ the face velocity. For a target of 0.5 m/s:
+
+\[ Q = A\,v = (0.9\,\text{m} \times 0.5\,\text{m}) \times 0.5\,\tfrac{\text{m}}{\text{s}} = 0.225\ \tfrac{\text{m}^3}{\text{s}} \]
+
+## Frame Beam Stress
+
+The bending stress in the horizontal support member is
+
+$$\sigma = \frac{M\,y}{I}, \qquad M = \frac{w L^2}{8}$$
+
+and must satisfy $\sigma \le \sigma_{y}/n$ for the chosen safety factor $n$.
+
+# Control Logic
+
+## PLC Speed Control (IEC 61131-3 ST)
+
+```st
+PROGRAM FanSpeedControl
+VAR
+    Speed_SP    : REAL := 1450.0;   (* rpm setpoint *)
+    Speed_PV    : REAL;
+    Error       : REAL;
+    Output_Pct  : REAL;
+    Kp          : REAL := 0.8;
+    StartDelay  : TON;
+    RunCmd      : BOOL;
+    Fault       : BOOL;
+END_VAR
+
+StartDelay(IN := RunCmd AND NOT Fault, PT := T#5s);
+
+IF StartDelay.Q THEN
+    Error := Speed_SP - Speed_PV;
+    Output_Pct := LIMIT(0.0, Output_Pct + Kp * Error * 0.01, 100.0);
+ELSE
+    Output_Pct := 0.0;
+END_IF
+END_PROGRAM
+```
+
+## Monitoring Firmware (C++)
+
+```cpp
+#include <cstdint>
+
+// Convert a 12-bit ADC reading from a 0-10 V transmitter into face velocity (m/s).
+float faceVelocity(uint16_t adc) {
+    const float vref = 3.3f, fullScale = 4095.0f, divider = 3.03f;
+    float volts = (adc / fullScale) * vref * divider;   // restore 0-10 V range
+    return volts * 0.1f;                                 // 0-10 V -> 0-1 m/s
+}
+```
+
+## Python Verification Script
+
+```python
+def power_ratio(n2: float, n1: float) -> float:
+    """Cube-law power scaling from the affinity laws."""
+    return (n2 / n1) ** 3
+
+print(round(power_ratio(1200, 1450), 3))
+```
+
+# Layout Reference
+
+![System Schematic|420px]({{DIAGRAM}})
+
+# Commissioning Checklist
+
+- [x] Verify motor and VFD nameplate data
+- [x] Confirm sash height interlock input
+- [ ] Measure face velocity at five grid points
+- [ ] Record results and sign off
+
+</script>
+
+<!-- ===== CDN scripts (all pre-cached by sw.js). Prism auto-highlighting is disabled; we call Prism.highlight() directly. ===== -->
+<script>window.Prism = { manual: true, disableWorkerMessageHandler: true };</script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+
+<script>
+'use strict';
+/* =====================================================================
+   Engineering Document & Note Manager
+   ===================================================================== */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const STATUSES = ['DRAFT', 'PRELIMINARY', 'FOR REVIEW', 'APPROVED', 'RELEASED', 'OBSOLETE'];
+const state = { md: '', format: 'visual', mode: 'view', toc: [], meta: null, db: null, dbOK: true };
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg, isErr = false) {
+  const t = $('#toast');
+  t.textContent = msg; t.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.className = ''), isErr ? 5000 : 2200);
+}
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+/* =====================================================================
+   IndexedDB – zero-dependency Promise wrapper
+   ===================================================================== */
+const DB = {
+  open() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error('IndexedDB not supported'));
+      const req = indexedDB.open('EngineeringDocDB', 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('documents')) db.createObjectStore('documents', { keyPath: 'id' });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => reject(new Error('IndexedDB open blocked by another tab'));
+    });
+  },
+  tx(db, mode, fn) {
+    return new Promise((resolve, reject) => {
+      let out;
+      const tx = db.transaction('documents', mode);
+      tx.oncomplete = () => resolve(out);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
+      const r = fn(tx.objectStore('documents'));
+      if (r) r.onsuccess = () => (out = r.result);
+    });
+  },
+  get: (db, id) => DB.tx(db, 'readonly', (s) => s.get(id)),
+  put: (db, rec) => DB.tx(db, 'readwrite', (s) => s.put(rec)),
+};
+
+function setSaveStatus(kind) {
+  const el = $('#saveStatus');
+  el.className = kind === 'saving' ? 'saving' : kind === 'error' ? 'error' : '';
+  el.querySelector('span').textContent = kind === 'saving' ? 'Saving…' : kind === 'error' ? 'Not saved' : 'Saved';
+}
+
+async function persistNow() {
+  if (!state.db) { setSaveStatus('error'); return; }
+  try {
+    const parsed = parseDoc(state.md);
+    await DB.put(state.db, { id: 'active_document', markdown: state.md, meta: parsed.meta || null, updated: Date.now() });
+    setSaveStatus('saved');
+  } catch (e) {
+    console.error('IndexedDB write failed', e);
+    setSaveStatus('error');
+    toast('Autosave failed: ' + (e && e.message ? e.message : e) + ' (storage quota?)', true);
+  }
+}
+const persistDebounced = debounce(persistNow, 400);
+
+/* =====================================================================
+   Frontmatter parsing + validation
+   ===================================================================== */
+function splitFrontmatter(text) {
+  const m = text.match(/^\uFEFF?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
+  if (!m) return { yamlText: null, body: text };
+  return { yamlText: m[1], body: text.slice(m[0].length) };
+}
+
+function validateMeta(m) {
+  const w = [];
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return ['Frontmatter is missing or is not a YAML mapping.'];
+  const str = (k) => { if (typeof m[k] !== 'string' || !m[k].trim()) w.push(`"${k}" is missing or not a string.`); };
+  str('doc_number'); str('title');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(m.date || ''))) w.push('"date" must be YYYY-MM-DD.');
+  if (!STATUSES.includes(m.status)) w.push(`"status" must be one of: ${STATUSES.join(', ')}.`);
+  for (const k of ['author', 'approver']) {
+    const o = m[k];
+    if (!o || typeof o !== 'object' || !o.name || !o.title) w.push(`"${k}" needs both "name" and "title".`);
+  }
+  if (!Array.isArray(m.compliance)) w.push('"compliance" must be a list of standards.');
+  if (!Array.isArray(m.revisions) || !m.revisions.length) w.push('"revisions" must be a non-empty list.');
+  else m.revisions.forEach((r, i) => {
+    if (!r || typeof r !== 'object') return w.push(`revisions[${i}] is not an object.`);
+    if (r.rev === undefined || r.rev === null || r.rev === '') w.push(`revisions[${i}].rev is missing.`);
+    else if (typeof r.rev !== 'string') w.push(`revisions[${i}].rev should be quoted (e.g. "1.0"); unquoted 1.0 is read as the number 1.`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(r.date || ''))) w.push(`revisions[${i}].date must be YYYY-MM-DD.`);
+    for (const k of ['author', 'approver', 'description']) if (!r[k]) w.push(`revisions[${i}].${k} is missing.`);
+  });
+  return w;
+}
+
+/* Returns { meta (normalised or null), warnings[], body } */
+function parseDoc(text) {
+  const { yamlText, body } = splitFrontmatter(text);
+  if (yamlText === null) return { meta: null, warnings: ['No YAML frontmatter found (document must begin with --- ... ---).'], body };
+  let meta;
+  try {
+    // CORE_SCHEMA keeps YYYY-MM-DD as a string instead of a Date object
+    meta = jsyaml.load(yamlText, { schema: jsyaml.CORE_SCHEMA });
+  } catch (e) {
+    return { meta: null, warnings: ['YAML error: ' + (e.reason || e.message)], body };
+  }
+  const warnings = validateMeta(meta);
+  if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
+    if (Array.isArray(meta.revisions)) meta.revisions = meta.revisions.filter((r) => r && typeof r === 'object').map((r) => ({ ...r, rev: String(r.rev ?? ''), date: String(r.date ?? '') }));
+    meta.date = String(meta.date ?? '');
+    return { meta, warnings, body };
+  }
+  return { meta: null, warnings, body };
+}
+const activeRev = (meta) => (meta && Array.isArray(meta.revisions) && meta.revisions.length ? meta.revisions[meta.revisions.length - 1] : null);
+const statusClass = (s) => 'st-' + (STATUSES.includes(s) ? s.replace(' ', '-') : 'UNKNOWN');
+
+/* =====================================================================
+   Prism: IEC 61131-3 Structured Text + language aliases
+   ===================================================================== */
+try {
+  Prism.languages.iecst = {
+    comment: [{ pattern: /\(\*[\s\S]*?\*\)/, greedy: true }, { pattern: /\/\/.*/, greedy: true }],
+    string: { pattern: /'(?:\$.|[^'$\r\n])*'|"(?:\$.|[^"$\r\n])*"/, greedy: true },
+    number: [/\b(?:L?TIME|T|LT|D|DT|TOD|DATE)#[\w:.\-]+/i, /\b(?:16|8|2)#[0-9a-f_]+\b/i, /\b\d[\d_]*(?:\.\d+)?(?:e[+-]?\d+)?\b/i],
+    'class-name': /\b(?:BOOL|BYTE|WORD|DWORD|LWORD|SINT|INT|DINT|LINT|USINT|UINT|UDINT|ULINT|REAL|LREAL|TIME|LTIME|DATE|TOD|DT|STRING|WSTRING|CHAR|WCHAR|ANY\w*|POINTER|REFERENCE|ARRAY|STRUCT)\b/i,
+    function: /\b(?:TON|TOF|TP|CTU|CTD|CTUD|R_TRIG|F_TRIG|RS|SR|ABS|SQRT|LN|LOG|EXP|SIN|COS|TAN|ASIN|ACOS|ATAN|MIN|MAX|LIMIT|SEL|MUX|SHL|SHR|ROL|ROR|TRUNC|[A-Z]+_TO_[A-Z]+|LEN|LEFT|RIGHT|MID|CONCAT|INSERT|DELETE|REPLACE|FIND)(?=\s*\()/i,
+    keyword: /\b(?:PROGRAM|END_PROGRAM|FUNCTION_BLOCK|END_FUNCTION_BLOCK|FUNCTION|END_FUNCTION|METHOD|END_METHOD|ACTION|END_ACTION|VAR_INPUT|VAR_OUTPUT|VAR_IN_OUT|VAR_GLOBAL|VAR_TEMP|VAR_EXTERNAL|VAR_CONFIG|VAR|END_VAR|CONSTANT|RETAIN|PERSISTENT|AT|IF|THEN|ELSIF|ELSE|END_IF|CASE|OF|END_CASE|FOR|TO|BY|DO|END_FOR|WHILE|END_WHILE|REPEAT|UNTIL|END_REPEAT|EXIT|CONTINUE|RETURN|TYPE|END_TYPE|END_STRUCT|CONFIGURATION|END_CONFIGURATION|RESOURCE|END_RESOURCE|TASK|STEP|END_STEP|TRANSITION|END_TRANSITION)\b/i,
+    boolean: /\b(?:TRUE|FALSE)\b/i,
+    operator: /:=|=>|<>|<=|>=|\*\*|[-+*\/<>=&]|\b(?:AND|OR|XOR|NOT|MOD)\b/i,
+    punctuation: /[;:,.()\[\]]/,
+  };
+} catch (e) { console.warn('Could not define IEC ST grammar for Prism:', e); }
+
+const LANG_ALIAS = { python: 'python', py: 'python', c: 'c', cpp: 'cpp', cxx: 'cpp', 'c++': 'cpp', arduino: 'cpp', ino: 'cpp', iecst: 'iecst', st: 'iecst', scl: 'iecst', plc: 'iecst' };
+
+function highlightCode(code, lang) {
+  const key = LANG_ALIAS[(lang || '').toLowerCase()];
+  try {
+    if (key && window.Prism && Prism.languages[key]) return Prism.highlight(code, Prism.languages[key], key);
+  } catch (e) { console.warn('Prism tokenisation failed for', lang, e); }
+  return esc(code);
+}
+
+/* =====================================================================
+   Markdown pipeline: protect code → protect math → marked → restore math
+   ===================================================================== */
+function protect(src) {
+  const codes = [], maths = [];
+  let s = src;
+  // 1. fenced code, 2. inline code (so math regexes never run inside code)
+  s = s.replace(/^(```|~~~)[^\n]*\n[\s\S]*?\n\1[^\n]*$/gm, (m) => { codes.push(m); return `ZZCODE${codes.length - 1}ZZ`; });
+  s = s.replace(/(`+)(?!`)[^\n]*?[^`\n]\1(?!`)/g, (m) => { codes.push(m); return `ZZCODE${codes.length - 1}ZZ`; });
+  // 3. math (display first, then inline)
+  const stash = (tex, display) => { maths.push({ tex: tex.trim(), display }); return `ZZMATH${maths.length - 1}ZZ`; };
+  s = s.replace(/\$\$([\s\S]+?)\$\$/g, (m, t) => stash(t, true));
+  s = s.replace(/\\\[([\s\S]+?)\\\]/g, (m, t) => stash(t, true));
+  s = s.replace(/\\\(([\s\S]+?)\\\)/g, (m, t) => stash(t, false));
+  s = s.replace(/(?<![\\$])\$(?![\s$])([^$\n]+?)(?<![\s\\])\$(?![\d$])/g, (m, t) => stash(t, false));
+  // restore code before marked sees the text
+  s = s.replace(/ZZCODE(\d+)ZZ/g, (m, i) => codes[+i]);
+  return { text: s, maths };
+}
+
+function renderMath(m) {
+  if (typeof katex === 'undefined') return `<span class="math-err">${esc(m.tex)}</span>`;
+  try {
+    const html = katex.renderToString(m.tex, { displayMode: m.display, throwOnError: false, errorColor: '#dc2626', strict: 'ignore', output: 'htmlAndMathml' });
+    return m.display ? `<span class="math-block">${html}</span>` : html;
+  } catch (e) {
+    console.warn('KaTeX error', e);
+    return `<span class="math-err" title="${esc(e.message)}">${esc(m.tex)}</span>`;
+  }
+}
+
+function safeUrl(u) { return /^\s*(javascript|vbscript):/i.test(u || '') ? '#' : u; }
+
+/* opts: prefix (heading id prefix), light (skip KaTeX/Prism/images – used for TOC only), interactive (enable checkboxes) */
+function renderBody(src, opts = {}) {
+  const { prefix = 'sec-', light = false, interactive = false } = opts;
+  const { text, maths } = protect(src);
+  const toc = [], cnt = [0, 0, 0, 0];
+  let hIdx = 0, taskIdx = 0;
+
+  const plain = (raw) => String(raw).replace(/ZZMATH(\d+)ZZ/g, (m, i) => maths[+i].tex).replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+
+  const renderer = {
+    heading(t, level, raw) {
+      const i = hIdx++;
+      let num = '';
+      if (level <= 4) {
+        cnt[level - 1]++;
+        for (let k = level; k < 4; k++) cnt[k] = 0;
+        num = level === 1 ? `${cnt[0]}.0` : cnt.slice(0, level).join('.');
+        toc.push({ id: prefix + i, level, num, title: plain(raw) });
+      }
+      return `<h${level} id="${prefix}${i}">${num ? `<span class="hnum">${num}</span>` : ''}${t}</h${level}>\n`;
+    },
+    code(code, infostring) {
+      const lang = ((infostring || '').match(/^\S*/) || [''])[0];
+      if (light) return '<pre><code></code></pre>';
+      const clean = code.replace(/\n$/, '');
+      const rows = clean.split('\n').map((_, k) => k + 1).join('\n');
+      return `<div class="codeblock"><span class="lang">${esc(lang)}</span><button type="button" class="copy-btn">Copy</button><pre class="language-${esc(lang || 'text')}"><span class="ln">${rows}</span><code>${highlightCode(clean, lang)}</code></pre></div>\n`;
+    },
+    image(href, title, alt) {
+      if (light) return '';
+      let a = alt || '', style = '';
+      const p = a.lastIndexOf('|');
+      if (p >= 0) {
+        const size = a.slice(p + 1).trim();
+        if (/^\d+(?:\.\d+)?(?:px|%)?$/.test(size)) { a = a.slice(0, p).trim(); style = `width:${/\D$/.test(size) ? size : size + 'px'};`; }
+      }
+      return `<img src="${esc(safeUrl(href))}" alt="${esc(a)}"${title ? ` title="${esc(title)}"` : ''} style="${style}max-width:100%;height:auto">`;
+    },
+    checkbox(checked) {
+      const n = taskIdx++;
+      return `<input type="checkbox" class="task" data-i="${n}"${checked ? ' checked' : ''}${interactive ? '' : ' disabled'}> `;
+    },
+  };
+
+  let html;
+  try {
+    html = new marked.Marked({ gfm: true, breaks: false, renderer }).parse(text);
+  } catch (e) {
+    console.error('Markdown parse failed', e);
+    html = `<pre class="math-err">${esc(e.message)}</pre>`;
+  }
+  html = html.replace(/ZZMATH(\d+)ZZ/g, (m, i) => (light ? '' : renderMath(maths[+i])));
+  return { html, toc };
+}
+
+const stripData = (s) => s.replace(/\(data:[^)\s]*\)/g, '(data:)');
+
+/* =====================================================================
+   Document card (screen) and rendering
+   ===================================================================== */
+function docCardHTML(meta, warnings) {
+  if (!meta) return warnings.length ? `<div class="doccard"><div class="warnbox"><b>Frontmatter problem</b><ul>${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div></div>` : '';
+  const r = activeRev(meta);
+  return `<div class="doccard">
+    <div class="t">${esc(meta.title || 'Untitled')}</div>
+    <div class="m"><span><b>${esc(meta.doc_number || '—')}</b></span>
+      <span class="badge ${statusClass(meta.status)}">${esc(meta.status || 'NO STATUS')}</span>
+      <span>Rev <b>${esc(r ? r.rev : '—')}</b>${r ? ' · ' + esc(r.date) : ''}</span>
+      <span>Author: ${esc(meta.author && meta.author.name)}</span><span>Approver: ${esc(meta.approver && meta.approver.name)}</span></div>
+    ${Array.isArray(meta.compliance) && meta.compliance.length ? `<div class="m">Standards: ${meta.compliance.map(esc).join(' · ')}</div>` : ''}
+    ${warnings.length ? `<div class="warnbox"><b>Frontmatter issues</b><ul>${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
+  </div>`;
+}
+
+const previewVisible = () => state.format === 'visual';
+
+function refresh() {
+  const parsed = parseDoc(state.md);
+  state.meta = parsed.meta;
+  const badge = $('#issuesBadge');
+  if (parsed.warnings.length) { badge.style.display = ''; badge.textContent = `⚠ ${parsed.warnings.length} frontmatter issue${parsed.warnings.length > 1 ? 's' : ''}`; badge.title = parsed.warnings.join('\n'); }
+  else badge.style.display = 'none';
+  badge.onclick = () => toast(parsed.warnings.join('  |  '), true);
+
+  let res;
+  try {
+    if (previewVisible()) {
+      res = renderBody(parsed.body, { interactive: state.mode === 'edit' });
+      const p = $('#preview');
+      const keep = p.scrollTop;
+      p.innerHTML = `<div class="page doc">${docCardHTML(parsed.meta, parsed.warnings)}${res.html}</div>`;
+      p.scrollTop = keep;
+    } else {
+      res = renderBody(stripData(parsed.body), { light: true });
+    }
+  } catch (e) {
+    console.error('Render failed', e);
+    toast('Render error: ' + e.message, true);
+    return;
+  }
+  state.toc = res.toc;
+  renderTOC();
+  document.title = (parsed.meta && parsed.meta.doc_number ? parsed.meta.doc_number + ' – ' : '') + 'Engineering Document & Note Manager';
+}
+const refreshDebounced = debounce(refresh, 150);
+
+function renderTOC() {
+  const nav = $('#tocList');
+  $('#tocEmpty').style.display = state.toc.length ? 'none' : 'block';
+  nav.innerHTML = state.toc.map((t) => `<a href="#${t.id}" class="l${t.level}" data-id="${t.id}"><span class="num">${t.num}</span>${esc(t.title)}</a>`).join('');
+}
+
+function scrollToHeading(id) {
+  if (previewVisible()) {
+    const el = document.getElementById(id);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  }
+  // Raw view: locate the nth ATX heading in the source and scroll the textarea to it
+  const n = parseInt(id.replace(/^\D+/, ''), 10);
+  const lines = state.md.split('\n');
+  let fence = false, count = -1, offset = 0;
+  const fm = splitFrontmatter(state.md);
+  const startLine = fm.yamlText === null ? 0 : state.md.slice(0, state.md.length - fm.body.length).split('\n').length - 1;
+  for (let i = 0; i < lines.length; i++) {
+    if (i >= startLine) {
+      if (/^\s*(```|~~~)/.test(lines[i])) fence = !fence;
+      else if (!fence && /^#{1,6}\s+\S/.test(lines[i]) && ++count === n) {
+        const ed = $('#editor');
+        const lh = parseFloat(getComputedStyle(ed).lineHeight) || 20;
+        ed.scrollTo({ top: Math.max(0, i * lh - 40), behavior: 'smooth' });
+        ed.setSelectionRange(offset, offset + lines[i].length);
+        return;
+      }
+    }
+    offset += lines[i].length + 1;
+  }
+}
+
+/* =====================================================================
+   Layout / toggles
+   ===================================================================== */
+function applyLayout() {
+  const ed = $('#editor');
+  const layout = state.format === 'raw' ? 'raw' : state.mode === 'edit' ? 'visual-edit' : 'visual-view';
+  $('#content').dataset.layout = layout;
+  ed.readOnly = state.mode !== 'edit';
+  $('#segFormat').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === state.format));
+  $('#segMode').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === state.mode));
+  $('#btnImage').disabled = state.mode !== 'edit';
+  refresh();
+}
+$('#segFormat').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { state.format = b.dataset.v; applyLayout(); } });
+$('#segMode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { state.mode = b.dataset.v; applyLayout(); } });
+$('#btnSide').addEventListener('click', () => document.body.classList.toggle('no-side'));
+$('#tocList').addEventListener('click', (e) => { const a = e.target.closest('a'); if (a) { e.preventDefault(); scrollToHeading(a.dataset.id); } });
+
+/* Resizable divider */
+(() => {
+  const d = $('#divider');
+  d.addEventListener('pointerdown', (e) => {
+    d.setPointerCapture(e.pointerId); d.classList.add('drag');
+    const move = (ev) => document.documentElement.style.setProperty('--side-w', Math.min(Math.max(ev.clientX, 160), window.innerWidth * 0.6) + 'px');
+    const up = () => { d.classList.remove('drag'); d.removeEventListener('pointermove', move); d.removeEventListener('pointerup', up); };
+    d.addEventListener('pointermove', move); d.addEventListener('pointerup', up);
+  });
+})();
+
+/* Editor input */
+$('#editor').addEventListener('input', () => {
+  state.md = $('#editor').value;
+  setSaveStatus('saving');
+  persistDebounced();
+  refreshDebounced();
+});
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); setSaveStatus('saving'); persistNow(); }
+});
+
+/* Copy buttons + interactive task list */
+document.addEventListener('click', async (e) => {
+  const cb = e.target.closest('.copy-btn');
+  if (cb) {
+    const code = cb.closest('.codeblock').querySelector('code').textContent;
+    try { await navigator.clipboard.writeText(code); }
+    catch { const ta = document.createElement('textarea'); ta.value = code; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch {} ta.remove(); }
+    cb.textContent = 'Copied'; setTimeout(() => (cb.textContent = 'Copy'), 1200);
+  }
+});
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (!t.classList || !t.classList.contains('task') || state.mode !== 'edit') return;
+  toggleTask(+t.dataset.i);
+});
+function toggleTask(n) {
+  const fm = splitFrontmatter(state.md);
+  const head = state.md.slice(0, state.md.length - fm.body.length);
+  const lines = fm.body.split('\n');
+  let fence = false, c = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(```|~~~)/.test(lines[i])) { fence = !fence; continue; }
+    if (fence) continue;
+    const m = lines[i].match(/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)([ xX])(\])/);
+    if (m && ++c === n) { lines[i] = lines[i].replace(m[0], m[1] + (m[2] === ' ' ? 'x' : ' ') + m[3]); break; }
+  }
+  setMarkdown(head + lines.join('\n'), { fromUser: true });
+}
+
+function setMarkdown(text, { fromUser = false, seed = false } = {}) {
+  state.md = text;
+  $('#editor').value = text;
+  if (!seed) { setSaveStatus('saving'); persistDebounced(); }
+  fromUser ? refreshDebounced() : refresh();
+}
+
+/* =====================================================================
+   Image ingestion & canvas compression
+   ===================================================================== */
+function readAsDataURL(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(file); });
+}
+
+async function compressImage(file) {
+  if (file.type === 'image/svg+xml') return readAsDataURL(file);        // vector bypass
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Could not decode image')); i.src = url; });
+    let w = img.naturalWidth, h = img.naturalHeight;
+    const MAX = 1600;
+    if (Math.max(w, h) > MAX) { const k = MAX / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    let out = canvas.toDataURL('image/webp', 0.80);
+    if (!out.startsWith('data:image/webp')) {                           // browser lacks WebP encoding
+      let alpha = false;
+      if (file.type !== 'image/jpeg') {
+        const d = ctx.getImageData(0, 0, w, h).data;
+        for (let i = 3; i < d.length; i += 4) if (d[i] < 255) { alpha = true; break; }
+      }
+      out = alpha ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.82);
+    }
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+async function insertImageFile(file) {
+  const ed = $('#editor');
+  if (ed.readOnly) { toast('Switch to Edit mode to insert images.', true); return; }
+  try {
+    toast('Processing image…');
+    const data = await compressImage(file);
+    const alt = (file.name || 'Image').replace(/\.[^.]+$/, '').replace(/[\[\]|]/g, ' ').trim() || 'Image';
+    const snippet = `![${alt}|450px](${data})`;
+    const s = ed.selectionStart ?? ed.value.length, e = ed.selectionEnd ?? s;
+    ed.setRangeText(snippet, s, e, 'end');
+    ed.dispatchEvent(new Event('input'));
+    toast('Image inserted (' + Math.round(data.length / 1024) + ' KB)');
+  } catch (err) { console.error(err); toast('Image failed: ' + err.message, true); }
+}
+$('#btnImage').addEventListener('click', () => $('#fileImage').click());
+$('#fileImage').addEventListener('change', async (e) => { for (const f of e.target.files) await insertImageFile(f); e.target.value = ''; });
+$('#editor').addEventListener('dragover', (e) => { if ([...(e.dataTransfer?.items || [])].some((i) => i.kind === 'file')) e.preventDefault(); });
+$('#editor').addEventListener('drop', async (e) => {
+  const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type.startsWith('image/'));
+  if (!files.length) return;
+  e.preventDefault();
+  for (const f of files) await insertImageFile(f);
+});
+$('#editor').addEventListener('paste', async (e) => {
+  const files = [...(e.clipboardData?.items || [])].filter((i) => i.kind === 'file' && i.type.startsWith('image/')).map((i) => i.getAsFile());
+  if (!files.length) return;
+  e.preventDefault();
+  for (const f of files) await insertImageFile(f);
+});
+
+/* =====================================================================
+   File portability
+   ===================================================================== */
+$('#btnDownload').addEventListener('click', () => {
+  const name = (state.meta && state.meta.doc_number ? state.meta.doc_number : 'document').replace(/[^\w.\-]+/g, '_');
+  const rev = activeRev(state.meta);
+  const blob = new Blob([state.md], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${name}${rev ? '_Rev' + String(rev.rev).replace(/[^\w.\-]+/g, '') : ''}.md`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+$('#btnOpen').addEventListener('click', () => $('#fileOpen').click());
+$('#fileOpen').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const text = await f.text();
+    setMarkdown(text);
+    await persistNow();
+    toast('Opened ' + f.name);
+  } catch (err) { toast('Could not open file: ' + err.message, true); }
+});
+
+/* =====================================================================
+   PDF export (strict A4 via CSS paged media)
+   ===================================================================== */
+const cssStr = (s) => '"' + String(s ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ') + '"';
+
+function buildPrint() {
+  const parsed = parseDoc(state.md);
+  const m = parsed.meta || {};
+  const r = activeRev(parsed.meta) || { rev: '—', date: '' };
+  const status = m.status || 'NO STATUS';
+  const cls = m.classification || 'Uncontrolled when printed';
+  const res = renderBody(parsed.body, { prefix: 'p-' });
+  const watermark = status === 'DRAFT' || status === 'FOR REVIEW';
+  const signed = status === 'APPROVED' || status === 'RELEASED';
+
+  const person = (label, p, date, sign) => `<div class="cv-box"><h3>${label}</h3><div class="nm">${esc(p && p.name)}</div><div>${esc(p && p.title)}</div>
+    <div class="sg">Signature &nbsp;·&nbsp; Date: ${date ? esc(date) : '____ / ____ / ________'}</div></div>`;
+
+  const cover = `<section class="cover">
+    <div class="cv-co">ENGINEERING DOCUMENT</div>
+    <h1 class="cv-title">${esc(m.title || 'Untitled')}</h1>
+    <div class="cv-docno">${esc(m.doc_number || '—')}</div>
+    <span class="badge ${statusClass(status)}">${esc(status)}</span>
+    <div class="cv-grid">
+      <div class="cv-box"><h3>Current revision</h3><div class="nm">Rev ${esc(r.rev)}</div><div>${esc(r.date)}</div></div>
+      <div class="cv-box"><h3>Document date / classification</h3><div class="nm">${esc(m.date || '')}</div><div>${esc(cls)}</div></div>
+      ${person('Author', m.author, r.date)}
+      ${person('Approver', m.approver, signed ? r.date : '')}
+      <div class="cv-box cv-wide"><h3>Applicable compliance standards</h3>
+        ${Array.isArray(m.compliance) && m.compliance.length ? `<ul>${m.compliance.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : '<div>None listed.</div>'}</div>
+    </div></section>`;
+
+  const revRows = (Array.isArray(m.revisions) ? m.revisions : []).map((x) => `<tr><td>${esc(x.rev)}</td><td>${esc(x.date)}</td><td>${esc(x.description)}</td><td>${esc(x.ecn || '—')}</td><td>${esc(x.author)}</td><td>${esc(x.approver)}</td></tr>`).join('');
+  const tocItems = res.toc.map((t) => `<li class="l${t.level}"><span class="n">${t.num}</span><a href="#${t.id}">${esc(t.title)}</a><span class="dots"></span></li>`).join('');
+  const control = `<section class="docctl doc">
+    <h2 class="ctl">Revision History</h2>
+    <table><thead><tr><th>Rev</th><th>Date</th><th>Description</th><th>ECN / Ref</th><th>Prepared By</th><th>Approved By</th></tr></thead><tbody>${revRows || '<tr><td colspan="6">No revisions recorded.</td></tr>'}</tbody></table>
+    <h2 class="ctl second">Table of Contents</h2><ul class="tocp">${tocItems || '<li>No headings.</li>'}</ul></section>`;
+
+  const body = `<section class="doc body">${res.html}</section>`;
+  const wm = watermark ? `<div class="wm${status.length > 6 ? ' long' : ''}">${esc(status)}</div>` : '';
+  $('#printRoot').innerHTML = wm + cover + control + body;
+
+  // Running headers/footers are page-margin boxes (Chromium 131+). Literal strings are injected here because
+  // margin boxes cannot read document text. Cover page ("cover" named page) suppresses all four.
+  const rule = '0.4pt solid #94a3b8';
+  const box = 'font: 8.5pt Arial, Helvetica, sans-serif; color: #334155;';
+  $('#printPageStyle').textContent = `@media print {
+    @page { size: A4;
+      @top-left { content: ${cssStr((m.doc_number || '') + (m.title ? '  ·  ' + m.title : ''))}; ${box} border-bottom: ${rule}; padding-bottom: 2mm; }
+      @top-center { content: ""; border-bottom: ${rule}; }
+      @top-right { content: ${cssStr('Rev ' + r.rev)}; ${box} border-bottom: ${rule}; padding-bottom: 2mm; }
+      @bottom-left { content: ${cssStr(status + '  ·  ' + cls)}; ${box} border-top: ${rule}; padding-top: 2mm; }
+      @bottom-center { content: ""; border-top: ${rule}; }
+      @bottom-right { content: "Page " counter(page) " of " counter(pages); ${box} border-top: ${rule}; padding-top: 2mm; }
+    }
+    @page cover { @top-left{content:none;border:0} @top-center{content:none;border:0} @top-right{content:none;border:0}
+                  @bottom-left{content:none;border:0} @bottom-center{content:none;border:0} @bottom-right{content:none;border:0} }
+  }`;
+}
+
+$('#btnPdf').addEventListener('click', async () => {
+  try {
+    buildPrint();
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    await new Promise((r) => setTimeout(r, 150));
+    window.print();
+  } catch (e) { console.error(e); toast('PDF export failed: ' + e.message, true); }
+});
+window.addEventListener('beforeprint', () => { try { buildPrint(); } catch (e) { console.error(e); } });   // also covers Ctrl+P
+window.addEventListener('afterprint', () => { $('#printRoot').innerHTML = ''; $('#printPageStyle').textContent = ''; });
+
+/* =====================================================================
+   PWA: install prompt + service worker
+   ===================================================================== */
+let deferredPrompt = null;
+const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; if (!standalone()) $('#btnInstall').style.display = ''; });
+window.addEventListener('appinstalled', () => { deferredPrompt = null; $('#btnInstall').style.display = 'none'; });
+$('#btnInstall').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  try { deferredPrompt.prompt(); await deferredPrompt.userChoice; } catch (e) { console.warn(e); }
+  deferredPrompt = null; $('#btnInstall').style.display = 'none';
+});
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker registration failed:', e));
+  });
+}
+
+/* =====================================================================
+   Seed + boot
+   ===================================================================== */
+function sampleDiagram() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 220" font-family="Arial" font-size="14">
+<rect width="640" height="220" fill="#fff"/>
+<g fill="#f1f5f9" stroke="#0f172a" stroke-width="1.5"><rect x="20" y="80" width="110" height="60" rx="6"/><rect x="190" y="80" width="110" height="60" rx="6"/><rect x="360" y="80" width="110" height="60" rx="6"/><rect x="520" y="80" width="100" height="60" rx="6"/></g>
+<g fill="#0f172a" text-anchor="middle"><text x="75" y="115">Face velocity</text><text x="245" y="115">PLC (PI loop)</text><text x="415" y="115">VFD</text><text x="570" y="115">Fan motor</text></g>
+<g stroke="#0f172a" stroke-width="1.5" fill="none" marker-end="url(#a)"><path d="M130 110H190"/><path d="M300 110H360"/><path d="M470 110H520"/></g>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" fill="#0f172a"/></marker></defs>
+<text x="320" y="190" text-anchor="middle" fill="#475569">Figure 1 – Speed control signal path (sample)</text></svg>`;
+  return 'data:image/svg+xml;base64,' + btoa(svg);
+}
+
+async function boot() {
+  let rec = null;
+  try {
+    state.db = await DB.open();
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch {}
+    rec = await DB.get(state.db, 'active_document');
+  } catch (e) {
+    console.error('IndexedDB unavailable', e);
+    state.db = null;
+    toast('Local storage unavailable – changes will not be saved.', true);
+  }
+  if (rec && typeof rec.markdown === 'string') setMarkdown(rec.markdown, { seed: true });
+  else {
+    setMarkdown($('#seedDoc').textContent.replace(/^\n/, '').replace('{{DIAGRAM}}', sampleDiagram()), { seed: true });
+    if (state.db) await persistNow();
+  }
+  if (!state.db) setSaveStatus('error');
+  applyLayout();
+}
+boot();
+</script>
+</body>
+</html>
